@@ -1,4 +1,4 @@
 all:
-	nasm -f bin -o test.bin test.asm
-	qemu-system-i386 test.bin
+	nasm -f bin -o main.bin boot.asm
+	qemu-system-i386 main.bin
 
