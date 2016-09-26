@@ -21,7 +21,7 @@
 	mov edi, dword [es:di+28h]
 	xor eax,eax
 	mov es,ax
-	mov [fb],edi
+	mov [fbPtr],edi
 
 	;; Prep for 32 Bits
 	cli			; Disable Interrupts 
@@ -36,42 +36,28 @@
 	or eax, 1
 	mov cr0, eax
 
-	jmp (CODE_DESC - NULL_DESC) : Main
+	jmp 0x08:Main
 
-	;; Global Descriptor Table (GDT)
+	;; global descriptor table (gdt)
 	;; http://f.osdev.org/viewtopic.php?f=1&t=28936&start=15
-NULL_DESC:
-	dd 0            	; null descriptor
-	dd 0
-
-CODE_DESC:
-	dw 0xFFFF       	; limit low
-	dw 0            	; base low
-	db 0            	; base middle
-	db 10011010b    	; access
-	db 11001111b    	; granularity
-	db 0            	; base high
-
-DATA_DESC:
-	dw 0xFFFF       	; data descriptor
-	dw 0            	; limit low
-	db 0            	; base low
-	db 10010010b    	; access
-	db 11001111b    	; granularity
-	db 0            	; base high
-
-gdtr:
-	dw gdtr - NULL_DESC - 1
-	dd NULL_DESC
+gdt:	dw  0x0000, 0x0000, 0x0000, 0x0000 ; null
+	dw  0xFFFF, 0x0000, 0x9800, 0x00CF ; code
+	dw  0xFFFF, 0x0000, 0x9200, 0x00CF ; data
+gdtr:	dw  gdtr - gdt - 1
+	dd  gdt
 
 	;; Protected Mode
 	bits 32
 Main:
-	mov     ax, DATA_DESC - NULL_DESC
-	mov     ds, ax		; update data segment
+	mov     eax, 0x10 	; refresh all segment registers
+	mov     ds, eax
+	mov     es, eax
+	mov     fs, eax
+	mov     gs, eax
+	mov     ss, eax
 
 
-	mov eax, fb
+	mov eax, fbPtr
 	mov ebx, (640*480)	; size of fb (640x480x3)
 .loop:
 	mov [eax + 0], byte 0
@@ -81,11 +67,11 @@ Main:
 	cmp eax, ebx
 	jne .loop
 
+
 	jmp $
 
-
-	vbe_info resb 40h
-	fb dd 0
+	fbPtr dd 0
+	vbe_info times 40h db 0
 
 	times 510 - ($-$$) db 0
 	dw 0xaa55
