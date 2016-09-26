@@ -5,10 +5,25 @@
 	mov ax, cs
 	mov ds, ax
 
+	;; Display Setup...
+	;; https://forum.nasm.us/index.php?topic=963.0
+	;; http://computer-programming-forum.com/45-asm/10bd8847d74ce261-2.htm
+	mov ax, 4F01h		; Get VBE Info
+	mov bx, 0112h		; VBE mode (640x480/24)
+	mov di, vbe_info
+	int 10h
+
 	mov ax, 4F02h		; Set Display
 	mov bx, 0112h		; VBE mode (640x480/24)
 	int 10h
 
+	mov di,vbe_info
+	mov edi, dword [es:di+28h]
+	xor eax,eax
+	mov es,ax
+	mov [fb],edi
+
+	;; Prep for 32 Bits
 	cli			; Disable Interrupts 
 	lgdt [gdtr]		; Load GDR
 
@@ -22,8 +37,9 @@
 	mov cr0, eax
 
 	jmp (CODE_DESC - NULL_DESC) : Main
-	
+
 	;; Global Descriptor Table (GDT)
+	;; http://f.osdev.org/viewtopic.php?f=1&t=28936&start=15
 NULL_DESC:
 	dd 0            	; null descriptor
 	dd 0
@@ -48,7 +64,6 @@ gdtr:
 	dw gdtr - NULL_DESC - 1
 	dd NULL_DESC
 
-
 	;; Protected Mode
 	bits 32
 Main:
@@ -56,8 +71,8 @@ Main:
 	mov     ds, ax		; update data segment
 
 
-	mov eax, 0AA00h		; why???
-	mov ebx, (640*480*4)	; size of fb (640x480x3)
+	mov eax, fb
+	mov ebx, (640*480)	; size of fb (640x480x3)
 .loop:
 	mov [eax + 0], byte 0
 	mov [eax + 1], byte 0
@@ -69,6 +84,8 @@ Main:
 	jmp $
 
 
+	vbe_info resb 40h
+	fb dd 0
 
 	times 510 - ($-$$) db 0
 	dw 0xaa55
