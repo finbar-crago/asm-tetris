@@ -61,3 +61,8 @@ int 10h
 + http://www.monstersoft.com/tutorial1/VESA_info.html
 + http://www.asmcommunity.net/forums/topic/?id=10733
 + http://bos.asmhackers.net/docs/vga_without_bios/snippet_5/vga.php
+
+## Misc
+### NASM
++ http://www.nasm.us/doc/nasmdoc3.html
++ http://cs.lmu.edu/~ray/notes/nasmtutorial/
