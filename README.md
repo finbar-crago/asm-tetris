@@ -63,6 +63,40 @@ int 10h
 + http://bos.asmhackers.net/docs/vga_without_bios/snippet_5/vga.php
 
 ## Misc
+### Call a Function
+```nasm
+	push dword [fbPtr]
+	push (800*600)
+	push 0xff0000
+	call Fill
+
+; .......
+
+Fill:
+	push eax                ; save state
+	push ebx
+	push ecx                ; add 4 to esp for each push to find last arg
+                                ; (there is probably a better way to do this...)
+
+	mov eax, [esp+24]       ; arg1 (start)
+	mov ebx, eax
+	add ebx, [esp+20]       ; arg2 (size)
+	mov ecx, [esp+16]       ; arg3 (colour)
+.loop:
+	mov [eax], ecx
+	add eax, 3
+	cmp eax, ebx
+	jne .loop
+
+	pop ecx                  ; restore and return
+	pop ebx
+	pop eax
+	ret
+```
+#### Reference
++ http://stackoverflow.com/questions/37975177/how-can-i-pass-parameters-in-assembler-x86-function-call
++ https://en.wikipedia.org/wiki/X86_calling_conventions
+
 ### NASM
 + http://www.nasm.us/doc/nasmdoc3.html
 + http://cs.lmu.edu/~ray/notes/nasmtutorial/
