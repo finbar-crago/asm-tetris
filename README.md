@@ -1,6 +1,28 @@
 # Tetris in x86 assembly
 
 ## Protected Mode
+```nasm
+cli           ; Disable Interrupts
+lgdt [gdtr]   ; Load GDR
+
+in  al, 0x93  ; Switch A20 gate
+or  al, 2
+and al,~1
+out 0x92, al
+
+mov eax, cr0  ; Enable Protected Mode
+or  eax, 1
+mov cr0, eax
+
+jmp 0x08:Main
+```
+#### Reference
++ http://kurser.iha.dk/eit/embedded/Artikler/Gareau/Protected-Mode.pdf
++ http://ladsoft.tripod.com/pmode/masm386.txt
++ http://www.independent-software.com/writing-your-own-bootloader-for-a-toy-operating-system-7/
++ http://blog.ackx.net/asm-hello-world-bootloader.html
++ http://stackoverflow.com/questions/9137947/assembler-jump-in-protected-mode-with-gdt
+
 ### Global Descriptor Table
 ```nasm
         ;; Global Descriptor Table (GDT)
@@ -38,4 +60,4 @@ int 10h
 + http://stackoverflow.com/questions/16997250/bochs-with-graphics
 + http://www.monstersoft.com/tutorial1/VESA_info.html
 + http://www.asmcommunity.net/forums/topic/?id=10733
-
++ http://bos.asmhackers.net/docs/vga_without_bios/snippet_5/vga.php
