@@ -1,6 +1,23 @@
 	org  0x7c00
 	bits 16
+	jmp Start
 
+	fbPtr dd 0
+	vbe_info times 0x100 db 0
+	;; global descriptor table (gdt)
+	;; http://f.osdev.org/viewtopic.php?f=1&t=28936&start=15
+	;; http://skelix.net/skelixos/tutorial02_en.html
+gdt:	dq 0x0000000000000000 ; null
+	dq 0x00cf9a000000ffff ; code
+	dq 0x00cf92000000ffff ; data
+
+gdtr:	dw  gdtr - gdt - 1
+	dd  gdt
+
+;	fbPtr dd 0
+;	vbe_info times 0x100 db 0
+
+Start:
 	xor ax, ax
 	mov ax, cs
 	mov ds, ax
@@ -16,7 +33,7 @@
 	cmp ax,0x004f		; hang on fail
 	jnz $
 
-	mov edi, dword [es:di+28h]
+	mov edi, dword [vbe_info+28h]
 	mov [fbPtr], edi
 	xor eax, eax
 	mov es, ax
@@ -29,7 +46,6 @@
 	int 10h
 	cmp ax,0x004f		; hang on fail
 	jnz $
-
 
 	;; Prep for 32 Bits
 	cli			; Disable Interrupts 
@@ -46,14 +62,6 @@
 
 	jmp 0x08:Main
 
-	;; global descriptor table (gdt)
-	;; http://f.osdev.org/viewtopic.php?f=1&t=28936&start=15
-gdt:	dw  0x0000, 0x0000, 0x0000, 0x0000 ; null
-	dw  0xFFFF, 0x0000, 0x9800, 0x00CF ; code
-	dw  0xFFFF, 0x0000, 0x9200, 0x00CF ; data
-gdtr:	dw  gdtr - gdt - 1
-	dd  gdt
-
 	;; Protected Mode
 	bits 32
 Main:
@@ -64,28 +72,41 @@ Main:
 	mov     gs, eax
 	mov     ss, eax
 
-
 	mov al, 255
-	mov edi, fbPtr
+	mov edi, [fbPtr]
 	mov ecx, (800*600*3)
 	rep stosb
 
-	mov eax, fbPtr
+	mov eax, [fbPtr]
 	mov ebx, eax
-	add ebx, (800*600*3)
-.loop:
+	add ebx, (800*600)
+.loopR:
 	mov [eax + 0], byte 0
 	mov [eax + 1], byte 0
 	mov [eax + 2], byte 255
 	add eax, 3
 	cmp eax, ebx
-	jne .loop
+	jne .loopR
 
+	add ebx, (800*600)
+.loopG:
+	mov [eax + 0], byte 0
+	mov [eax + 1], byte 255
+	mov [eax + 2], byte 0
+	add eax, 3
+	cmp eax, ebx
+	jne .loopG
+
+	add ebx, (800*600)
+.loopB:
+	mov [eax + 0], byte 255
+	mov [eax + 1], byte 0
+	mov [eax + 2], byte 0
+	add eax, 3
+	cmp eax, ebx
+	jne .loopB
 
 	jmp $
-
-	fbPtr dd 0
-	vbe_info times 40h db 0
 
 	times 510 - ($-$$) db 0
 	dw 0xaa55
