@@ -65,3 +65,4 @@ int 10h
 ## Misc
 ### NASM
 + http://www.nasm.us/doc/nasmdoc3.html
++ http://cs.lmu.edu/~ray/notes/nasmtutorial/
