@@ -58,12 +58,13 @@ Start:
 	;; --- Start of Protected Mode ---
 	bits 32
 Main:
-	mov     eax, 0x10 	; refresh all segment registers
-	mov     ds, eax
-	mov     es, eax
-	mov     fs, eax
-	mov     gs, eax
-	mov     ss, eax
+	mov eax, 0x10		; refresh all segment registers
+	mov ds, eax
+	mov es, eax
+	mov fs, eax
+	mov gs, eax
+	mov ss, eax
+	mov esp, 0x9000		; set a stack pointer
 
 	mov al, 255
 	mov edi, [fbPtr]
@@ -71,35 +72,49 @@ Main:
 	rep stosb
 
 	mov eax, [fbPtr]
+	push eax
+	push (800*600)
+	push 0xff0000
+	call Fill
+
+	add eax, (800*600)
+	push eax
+	push (800*600)
+	push 0x00ff00
+	call Fill
+
+	add eax, (800*600)
+	push eax
+	push (800*600)
+	push 0x0000ff
+	call Fill
+
+	jmp $			; Looooop for all future time; for always.....
+
+
+	;; --- Start of Functions ---
+
+Fill:
+	push eax		; save state
+	push ebx
+	push ecx		; add 4 to esp for each push to find last arg
+
+	mov eax, [esp+24]	; arg1 (start)
 	mov ebx, eax
-	add ebx, (800*600)
-.loopR:
-	mov [eax + 0], byte 0
-	mov [eax + 1], byte 0
-	mov [eax + 2], byte 255
+	add ebx, [esp+20]	; arg2 (size)
+	mov ecx, [esp+16]	; arg3 (colour)
+.loop:
+	mov [eax], ecx
 	add eax, 3
 	cmp eax, ebx
-	jne .loopR
+	jne .loop
 
-	add ebx, (800*600)
-.loopG:
-	mov [eax + 0], byte 0
-	mov [eax + 1], byte 255
-	mov [eax + 2], byte 0
-	add eax, 3
-	cmp eax, ebx
-	jne .loopG
+	pop ecx			; restore and return
+	pop ebx
+	pop eax
+	ret
 
-	add ebx, (800*600)
-.loopB:
-	mov [eax + 0], byte 255
-	mov [eax + 1], byte 0
-	mov [eax + 2], byte 0
-	add eax, 3
-	cmp eax, ebx
-	jne .loopB
 
-	jmp $
-
+	;; This is the end.
 	times 510 - ($-$$) db 0
 	dw 0xaa55
