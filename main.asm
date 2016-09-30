@@ -3,10 +3,19 @@
 
 	jmp Start
 
-	;; Variables, Constants, etc...
+	;; Variables, Constants, Macros, etc...
 	VBE_MODE EQU  115h	; (0x115 => 800x600/24)
 	WIDTH    EQU  800
 	HEIGHT   EQU  600
+
+%macro  SETINT 2
+	mov eax,%2
+	mov [500h+%1*8],ax
+	mov word [500h+%1*8+2],0x8
+	mov word [500h+%1*8+4],0x8E00
+	shr eax,16
+	mov [500h+%1*8+6],ax
+%endmacro
 
 	fbPtr dd 0
 	vbe_info times 0x100 db 0
@@ -27,6 +36,10 @@ gdt:	dq 0x0000000000000000 ; null
 
 gdtr:	dw  gdtr - gdt - 1
 	dd  gdt
+
+idtr:
+	dw (100h*8)-1
+	dd 0500h
 
 
 Start:
@@ -61,9 +74,17 @@ Start:
 	cmp ax,0x004f		; hang on fail
 	jnz $
 
+	mov al,  0
+	mov edi, 500h
+	mov ecx, 100h
+	rep stosb		; Zero IDT
+
+	SETINT 42, ClearFB
+
 	;; Prep for 32 Bits
 	cli			; Disable Interrupts 
-	lgdt [gdtr]		; Load GDR
+	lgdt [gdtr]		; Set GDR
+	lidt [idtr]		; Set IDT
 
 	in  al, 0x93         	; Switch A20 gate via fast A20 port 92
 	or  al, 2
@@ -93,10 +114,8 @@ Start:
 Main:
 	mov esp, 0x9000		; set a stack pointer
 
-	mov al, 255
-	mov edi, [fbPtr]
-	mov ecx, (WIDTH * HEIGHT * 3)
-	rep stosb		; All white screen
+	; call ClearFB
+	int 42
 
 	mov eax, 0
 	mov ecx, 0xff0000
@@ -147,6 +166,16 @@ Fill:
 	pop ecx			; restore and return
 	pop ebx
 	pop eax
+	ret
+
+
+ClearFB:
+	pusha
+	mov al,  0xff
+	mov edi, [fbPtr]
+	mov ecx, (WIDTH * HEIGHT * 3)
+	rep stosb
+	popa
 	ret
 
 
