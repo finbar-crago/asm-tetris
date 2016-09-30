@@ -14,10 +14,11 @@
 dap:
 	db	10h		; size of DAP
 	db	0		; unused
-	dw	2		; sectors to read
-	dw	0x7e00		; destination address (0:7e00)
+	dw	1		; sectors to read
+	dw	Main		; destination address (0:7e00)
 	dw	0		; page
-	dq	0		; ???
+	dw	1		; starting LBA
+	dw	0		; upper part of 48 bit LBA
 
 	;; Global Descriptor Table (GDT)
 gdt:	dq 0x0000000000000000 ; null
@@ -80,14 +81,15 @@ Start:
 	mov gs, ax
 	mov ss, ax
 
-	jmp 8:7e00h
+	jmp 0x8:Main
 
 	;; Pad out the boot sector..
 	times 510 - ($-$$) db 0
 	dw 0xaa55		; magic number
-	;; --- Start of Protected Mode ---
-	bits 32
 
+	;; --- Start of Protected Mode ---
+	SECTION pmode start=0x7e00 ; http://stackoverflow.com/questions/28645439/
+	bits 32
 Main:
 	mov esp, 0x9000		; set a stack pointer
 
@@ -164,3 +166,6 @@ Tick:
 
 	popa
 	ret
+
+
+	times 200h - ($-$$) db 90 ; Pad image to 1kb
