@@ -79,8 +79,6 @@ Start:
 	mov ecx, 100h
 	rep stosb		; Zero IDT
 
-	SETINT 20h, ClearFB
-
 	;; Prep for 32 Bits
 	cli			; Disable Interrupts 
 	lgdt [gdtr]		; Set GDR
@@ -116,6 +114,7 @@ Main:
 
 	;; PIC/IRQ Interrupt Stuff...
 	;; http://forum.osdev.org/viewtopic.php?f=1&p=247999
+	;; https://courses.engr.illinois.edu/ece390/books/artofasm/CH17/CH17-3.html
 	mov al,0x11		; put both 8259s to init mode
 	out 0x20,al
 	out 0xA0,al
@@ -124,14 +123,17 @@ Main:
 	out  0x21,al
 
 	in  al, 21h		; Read existing bits.
-	and al, 0xfd		; Enable  IRQ 1
+	and al, 0xfc		; Enable  IRQ 1
 	out 21h, al		; Write result back to PIC.
 	mov al, 0xff
 	out 0xa1, al
-	sti
 
-	jmp $
+	SETINT 20h, nullInt
+	SETINT 21h, kbdInt
 
+	sti			; interrupts on
+
+	;; --- Start Application Code ---
 	mov eax, 0
 	mov ecx, 0xff0000
 	mov ebx, (WIDTH * HEIGHT * 3)
@@ -212,4 +214,23 @@ Tick:
 	ret
 
 
+	;; http://wiki.osdev.org/IRQ
+kbdInt:
+	push eax
+	in al,60h		; read from keyboard
+
+	call ClearFB
+
+	mov al,20h		; acknowledge the interrupt
+	out 20h,al
+	pop eax
+	iret
+
+
+nullInt:
+	mov al,20h
+	out 20h,al
+	iret
+
+	;; --- End of the image. ---
 	times 200h - ($-$$) db 90 ; Pad image to 1kb
