@@ -79,7 +79,7 @@ Start:
 	mov ecx, 100h
 	rep stosb		; Zero IDT
 
-	SETINT 42, ClearFB
+	SETINT 20h, ClearFB
 
 	;; Prep for 32 Bits
 	cli			; Disable Interrupts 
@@ -114,8 +114,23 @@ Start:
 Main:
 	mov esp, 0x9000		; set a stack pointer
 
-	; call ClearFB
-	int 42
+	;; PIC/IRQ Interrupt Stuff...
+	;; http://forum.osdev.org/viewtopic.php?f=1&p=247999
+	mov al,0x11		; put both 8259s to init mode
+	out 0x20,al
+	out 0xA0,al
+
+	mov  al,0x20		; remap pic irq0-irq7 -> int 20h-27h
+	out  0x21,al
+
+	in  al, 21h		; Read existing bits.
+	and al, 0xfd		; Enable  IRQ 1
+	out 21h, al		; Write result back to PIC.
+	mov al, 0xff
+	out 0xa1, al
+	sti
+
+	jmp $
 
 	mov eax, 0
 	mov ecx, 0xff0000
