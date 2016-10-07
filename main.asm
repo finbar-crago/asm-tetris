@@ -17,6 +17,7 @@
 	mov [500h+%1*8+6],ax
 %endmacro
 
+	tick dd 0
 	fbPtr dd 0
 	vbe_info times 0x100 db 0
 
@@ -122,25 +123,30 @@ Main:
 	mov  al,0x20		; remap pic irq0-irq7 -> int 20h-27h
 	out  0x21,al
 
-	in  al, 21h		; Read existing bits.
-	and al, 0xfc		; Enable  IRQ 1
-	out 21h, al		; Write result back to PIC.
-	mov al, 0xff
-	out 0xa1, al
+	in  al, 21h
+	and al, 0xfc		; Enable IRQ 0 & 1
+	out 21h, al		; Write to PIC1
 
-	SETINT 20h, nullInt
+	in  al, 0a1h
+	mov al, 0xff		; Enable nothing
+	out 0xa1, al		; Write to PIC2
+
+	SETINT 20h, tickInt
 	SETINT 21h, kbdInt
 
 	sti			; interrupts on
 
 	;; --- Start Application Code ---
+	call ClearFB
+	jmp $
+
 	mov eax, 0
 	mov ecx, 0xff0000
 	mov ebx, (WIDTH * HEIGHT * 3)
 .loop:
-	push eax
-	add  eax, [fbPtr]
-	push eax
+	ror ecx, 8		; Bitwise Rotate on Colour
+
+	push dword [fbPtr]
 	push (WIDTH * HEIGHT)
 	push ecx
 	call Fill
@@ -148,7 +154,9 @@ Main:
 	pop edx
 	pop edx
 
-	ror ecx, 8		; Bitwise Rotate on Colour
+	call Sleep
+
+	jmp .loop
 
 	pop eax
 	add eax, (WIDTH * HEIGHT)
@@ -156,8 +164,7 @@ Main:
 	div ebx			; (eax/ebx) => eax, remainder => edx
 	mov eax, edx		; http://stackoverflow.com/questions/8021772
 
-	jmp $
-	call Tick
+	call Sleep
 	jmp .loop
 
 
@@ -200,15 +207,13 @@ ClearFB:
 ;;
 ;;  ref: http://stackoverflow.com/questions/9971405/
 ;;       http://stackoverflow.com/questions/17385356/
-Tick:
+Sleep:
 	pusha
-	mov ax, 0
-	mov ds, ax
-	mov bx, [46Ch]
-	.loop:
-	mov ax, [46Ch]
-	cmp ax, bx
-	je   .loop
+	mov eax, [tick]
+	add eax, 1h
+.loop:
+	cmp eax, [tick]
+	jne   .loop
 
 	popa
 	ret
@@ -224,6 +229,30 @@ kbdInt:
 	mov al,20h		; acknowledge the interrupt
 	out 20h,al
 	pop eax
+	iret
+
+
+tickInt:
+	cli
+	push eax
+	push ebx
+	inc dword [tick]
+
+	mov eax, [fbPtr]
+	mov ebx, eax
+	add ebx, (WIDTH * HEIGHT * 3)
+.loop:
+	add [eax+1], word 1
+	add eax, 3
+	cmp eax, ebx
+	jne .loop
+
+	mov al,20h
+	out 20h,al
+
+	pop ebx
+	pop eax
+	sti
 	iret
 
 
