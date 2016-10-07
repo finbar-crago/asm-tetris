@@ -134,49 +134,44 @@ Main:
 	SETINT 20h, tickInt
 	SETINT 21h, kbdInt
 
+	;; http://www.brokenthorn.com/Resources/OSDevPit.html
+	mov al, 110110b
+	out 0x43, al
+	mov ax, 1193180/100 ; 100hz, or 10 milliseconds
+	out 0x40, al
+	xchg ah, al
+	out 0x40, al
+
 	sti			; interrupts on
 
 	;; --- Start Application Code ---
-	call ClearFB
-	jmp $
 
-	mov eax, 0
-	mov ecx, 0xff0000
-	mov ebx, (WIDTH * HEIGHT * 3)
+
+	mov eax, 0xff_00_00_00
 .loop:
-	ror ecx, 8		; Bitwise Rotate on Colour
-
 	push dword [fbPtr]
-	push (WIDTH * HEIGHT)
-	push ecx
+	push (WIDTH * HEIGHT * 3)
+	push eax
 	call Fill
-	pop edx
-	pop edx
-	pop edx
 
+	ror eax, 8		; Bitwise Rotate on Colour
+
+	push eax
+	mov eax, 100
 	call Sleep
-
-	jmp .loop
-
 	pop eax
-	add eax, (WIDTH * HEIGHT)
-	mov edx, 0
-	div ebx			; (eax/ebx) => eax, remainder => edx
-	mov eax, edx		; http://stackoverflow.com/questions/8021772
-
-	call Sleep
 	jmp .loop
-
 
 	jmp $			; Looooop for all future time; for always.....
 
 	;; --- Start of Functions ---
 
 Fill:
-	push eax		; save state
+	push eax
 	push ebx
-	push ecx		; add 4 to esp for each push to find last arg
+	push ecx
 
+	;; add 4 to esp for each push to find last arg
 	mov eax, [esp+24]	; arg1 (start)
 	mov ebx, eax
 	add ebx, [esp+20]	; arg2 (size)
@@ -187,10 +182,11 @@ Fill:
 	cmp eax, ebx
 	jne .loop
 
-	pop ecx			; restore and return
+	pop ecx
 	pop ebx
 	pop eax
-	ret
+
+	ret 12
 
 
 ClearFB:
@@ -208,14 +204,20 @@ ClearFB:
 ;;  ref: http://stackoverflow.com/questions/9971405/
 ;;       http://stackoverflow.com/questions/17385356/
 Sleep:
-	pusha
-	mov eax, [tick]
-	add eax, 1h
-.loop:
-	cmp eax, [tick]
-	jne   .loop
+	push ebx
+.loop0:
+	mov ebx, dword [tick]
+	inc ebx
+	jno .loop1
+	inc ebx
+.loop1:
+	cmp dword [tick], ebx
+	jb .loop1
 
-	popa
+	dec eax
+	jnz .loop0
+
+	pop ebx
 	ret
 
 
@@ -235,22 +237,9 @@ kbdInt:
 tickInt:
 	cli
 	push eax
-	push ebx
 	inc dword [tick]
-
-	mov eax, [fbPtr]
-	mov ebx, eax
-	add ebx, (WIDTH * HEIGHT * 3)
-.loop:
-	add [eax+1], word 1
-	add eax, 3
-	cmp eax, ebx
-	jne .loop
-
 	mov al,20h
 	out 20h,al
-
-	pop ebx
 	pop eax
 	sti
 	iret
