@@ -120,8 +120,8 @@ Main:
 	out 0x20,al
 	out 0xA0,al
 
-	mov  al,0x20		; remap pic irq0-irq7 -> int 20h-27h
-	out  0x21,al
+	mov al,0x20		; remap pic irq0-irq7 -> int 20h-27h
+	out 0x21,al
 
 	in  al, 21h
 	and al, 0xfc		; Enable IRQ 0 & 1
@@ -134,13 +134,14 @@ Main:
 	SETINT 20h, tickInt
 	SETINT 21h, kbdInt
 
+	;; Set IRQ0 timer to 10ms
 	;; http://www.brokenthorn.com/Resources/OSDevPit.html
-	mov al, 110110b
-	out 0x43, al
-	mov ax, 1193180/100 ; 100hz, or 10 milliseconds
-	out 0x40, al
+	mov  al, 110110b
+	out  0x43, al
+	mov  ax, 1193180/100	; 100hz/10ms
+	out  0x40, al
 	xchg ah, al
-	out 0x40, al
+	out  0x40, al
 
 	sti			; interrupts on
 
@@ -162,7 +163,7 @@ Main:
 	pop eax
 	jmp .loop
 
-	jmp $			; Looooop for all future time; for always.....
+	jmp $			; Looooop for all future time.....
 
 	;; --- Start of Functions ---
 
@@ -199,10 +200,8 @@ ClearFB:
 	ret
 
 
-;;  "tick" timing function
-;;
-;;  ref: http://stackoverflow.com/questions/9971405/
-;;       http://stackoverflow.com/questions/17385356/
+	;; Sleep
+	;; EAX => ticks to wait (1 tick == 10ms)
 Sleep:
 	push ebx
 .loop0:
@@ -216,12 +215,10 @@ Sleep:
 
 	dec eax
 	jnz .loop0
-
 	pop ebx
 	ret
 
 
-	;; http://wiki.osdev.org/IRQ
 kbdInt:
 	push eax
 	in al,60h		; read from keyboard
