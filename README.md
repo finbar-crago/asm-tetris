@@ -91,7 +91,7 @@ Fill:
 	pop ecx                  ; restore and return
 	pop ebx
 	pop eax
-	ret
+	ret 12                   ; ret +4 for each dword stack arg 
 ```
 #### Reference
 + http://stackoverflow.com/questions/37975177/how-can-i-pass-parameters-in-assembler-x86-function-call
