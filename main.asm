@@ -147,47 +147,36 @@ Main:
 
 	;; --- Start Application Code ---
 
-
-	mov eax, 0xff_00_00_00
-.loop:
-	push dword [fbPtr]
-	push (WIDTH * HEIGHT * 3)
-	push eax
-	call Fill
-
-	ror eax, 8		; Bitwise Rotate on Colour
-
-	push eax
-	mov eax, 100
-	call Sleep
-	pop eax
-	jmp .loop
+	call DrawBox
 
 	jmp $			; Looooop for all future time.....
 
 	;; --- Start of Functions ---
 
-Fill:
-	push eax
-	push ebx
-	push ecx
+DrawBox:
+	pusha
+	;;  x0=100h,y0=100h  x1=200h, y1=200h
 
-	;; add 4 to esp for each push to find last arg
-	mov eax, [esp+24]	; arg1 (start)
-	mov ebx, eax
-	add ebx, [esp+20]	; arg2 (size)
-	mov ecx, [esp+16]	; arg3 (colour)
+	mov ebx, 100h
+
 .loop:
-	mov [eax], ecx
-	add eax, 3
-	cmp eax, ebx
-	jne .loop
+	mov edi, (WIDTH*3)
+	mov eax, 10h
+	add eax, ebx
+	mul edi
+	mov edi, [fbPtr]
+	add edi, eax
+	add edi, (10h * 3)
 
-	pop ecx
-	pop ebx
-	pop eax
+	mov al,  0xff
+	mov ecx, (100h *3)
+	rep stosb
 
-	ret 12
+	dec ebx
+	jnz .loop
+
+	popa
+	ret
 
 
 ClearFB:
@@ -248,4 +237,4 @@ nullInt:
 	iret
 
 	;; --- End of the image. ---
-	times 200h - ($-$$) db 90 ; Pad image to 1kb
+	times 200h - ($-$$) db 0 ; Pad image to 1kb
