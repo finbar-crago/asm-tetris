@@ -132,7 +132,8 @@ Main:
 	out 0xa1, al		; Write to PIC2
 
 	SETINT 20h, tickInt
-	SETINT 21h, kbdInt
+;	SETINT 21h, kbdInt
+	SETINT 21h, nullInt
 
 	;; Set IRQ0 timer to 10ms
 	;; http://www.brokenthorn.com/Resources/OSDevPit.html
@@ -147,6 +148,10 @@ Main:
 
 	;; --- Start Application Code ---
 
+	push 10h		; [ebp + 20] x
+	push 10h		; [ebp + 16] y
+	push 10h		; [ebp + 12] x+i
+	push 10h		; [ebp +  8] y+i
 	call DrawBox
 
 	jmp $			; Looooop for all future time.....
@@ -154,29 +159,46 @@ Main:
 	;; --- Start of Functions ---
 
 DrawBox:
-	pusha
-	;;  x0=100h,y0=100h  x1=200h, y1=200h
+	push ebp
+	mov ebp, esp
+	sub esp, (4*4)
 
-	mov ebx, 100h
+	push eax
+	push ebx
 
+	mov eax, [ebp + 20]	; x
+	mov ebx, 3
+	mul ebx
+	mov [ebp + 20], eax
+
+	mov eax, [ebp + 12]	; y
+	mov ebx, 3
+	mul ebx
+	mov [ebp + 12], eax
+
+	pop ebx
+	pop eax
+
+	mov ebx, [ebp + 8]	; y+i
 .loop:
 	mov edi, (WIDTH*3)
-	mov eax, 10h
+	mov eax, [ebp + 16]	; x+i
 	add eax, ebx
 	mul edi
 	mov edi, [fbPtr]
 	add edi, eax
-	add edi, (10h * 3)
+	add edi, [ebp + 20]	; x
 
 	mov al,  0xff
-	mov ecx, (100h *3)
+	mov ecx, [ebp + 12]	; x+i
 	rep stosb
 
 	dec ebx
 	jnz .loop
 
-	popa
-	ret
+	mov esp, ebp
+	pop ebp
+	ret (4*4)
 
 
 ClearFB:
