@@ -17,8 +17,11 @@
 	mov [500h+%1*8+6],ax
 %endmacro
 
+	;; Global Variables
 	tick dd 0
 	fbPtr dd 0
+	ink dd 0
+
 	vbe_info times 0x100 db 0
 
 dap:
@@ -147,12 +150,22 @@ Main:
 	sti			; interrupts on
 
 	;; --- Start Application Code ---
+	mov dword [ink], 0__ff_ff_00_h
 
-	push 10h		; [ebp + 20] x
-	push 10h		; [ebp + 16] y
+	mov ebx, 0h
+.loop:
+	push ebx		; [ebp + 20] x
+	push 00h		; [ebp + 16] y
 	push 10h		; [ebp + 12] x+i
 	push 10h		; [ebp +  8] y+i
+
 	call DrawBox
+	inc dword [ink]
+
+	mov eax, 1
+	call Sleep
+	inc ebx
+	jmp .loop
 
 	jmp $			; Looooop for all future time.....
 
@@ -165,6 +178,7 @@ DrawBox:
 
 	push eax
 	push ebx
+	push ecx
 
 	mov eax, [ebp + 20]	; x
 	mov ebx, 3
@@ -176,9 +190,6 @@ DrawBox:
 	mul ebx
 	mov [ebp + 12], eax
 
-	pop ebx
-	pop eax
-
 	mov ebx, [ebp + 8]	; y+i
 .loop:
 	mov edi, (WIDTH*3)
@@ -189,12 +200,16 @@ DrawBox:
 	add edi, eax
 	add edi, [ebp + 20]	; x
 
-	mov al,  0xff
+	mov al,  [ink]
 	mov ecx, [ebp + 12]	; x+i
 	rep stosb
 
 	dec ebx
 	jnz .loop
+
+	pop ecx
+	pop ebx
+	pop eax
 
 	mov esp, ebp
 	pop ebp
